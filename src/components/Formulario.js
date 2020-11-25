@@ -1,4 +1,7 @@
 import React, {useState} from 'react';
+import PropTypes from 'prop-types';
+import { obtenerDiferenciaYear, calcularMarca, obtenerPlan } from '../helper';
+
 
 //Styled
 import styled from '@emotion/styled';
@@ -45,9 +48,20 @@ const Boton = styled.button`
     }
 `;
 
+const Error = styled.div`
+    background-color: red;
+    color: white;
+    padding: 1rem;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 2rem;
+`;
+
 
 // Formulario
-const Formulario = () => {
+const Formulario = ({guardarResumen, guardarCargando}) => {
+
+    const [ error, guardarError ] = useState(false);
 
     const [datos, guardarDatos] = useState({
         marca: '',
@@ -67,9 +81,63 @@ const Formulario = () => {
         })
     }
 
+    // Cuando el usurio presiona SUMBIT
+    const cotizarSeguro = e => {
+        e.preventDefault();
+
+        if(marca.trim() === '' || year.trim() === '' || plan.trim() === ''){
+            guardarError(true);
+            return;
+        }
+
+        guardarError(false);
+
+        // Una base de 2000
+        let resultado = 2000;
+
+        // Obtener la diferencia de años
+        const diferencia = obtenerDiferenciaYear(year);
+
+
+        // Por cada año hay que restar el 3%
+        resultado -= (( diferencia *3 ) * resultado) / 100;
+
+        // Americano 15%
+        // Asiático 5%
+        // Europeo 30%
+        resultado = calcularMarca(marca) * resultado;
+
+
+        // Básico aumenta 20%
+        // Completo aumenta 50%
+        const incrementoPlan = obtenerPlan(plan);
+
+        resultado = parseFloat( incrementoPlan * resultado ).toFixed(2);
+
+        guardarCargando(true)
+
+        setTimeout(() => {
+
+            // Elimina el Spinner
+            guardarCargando(false)
+
+            // Pasa la información al componente principal
+            guardarResumen({
+                cotizacion: Number(resultado),
+                datos,
+            });
+
+        }, 3000);
+
+       
+    }
+
 
     return ( 
-        <form>
+        <form
+            onSubmit={cotizarSeguro}
+            >
+                { error ? <Error>Todos los campos son obligatorios</Error>  : null}
             <Campo>
                 <Label>Marca</Label>
                 <Select
@@ -92,6 +160,7 @@ const Formulario = () => {
                     onChange= {obtenerInformacion}
                 >
                     <option value="">-- Seleccione --</option>
+                    <option value="2022">2022</option>
                     <option value="2021">2021</option>
                     <option value="2020">2020</option>
                     <option value="2019">2019</option>
@@ -110,8 +179,8 @@ const Formulario = () => {
                 <InputRadio 
                     type="radio"
                     name="plan"
-                    value="basico"
-                    checked={plan === "basico"}
+                    value="básico"
+                    checked={plan === "básico"}
                     onChange= {obtenerInformacion}
                 />Básico
 
@@ -124,9 +193,14 @@ const Formulario = () => {
                 />Completo
             </Campo>
 
-            <Boton type="button">Cotizar</Boton>
+            <Boton type="submit">Cotizar</Boton>
         </form>
      );
 }
  
+Formulario.propTypes = {
+    guardarResumen: PropTypes.func.isRequired,
+    guardarCargando: PropTypes.func.isRequired,
+}
+
 export default Formulario;
